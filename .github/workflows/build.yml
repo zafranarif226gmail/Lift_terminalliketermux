@@ -1,0 +1,51 @@
+
+name: Build Lift Terminal APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Termux source
+        uses: actions/checkout@v4
+        with:
+          repository: termux/termux-app
+          path: source
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Rename app label
+        run: |
+          find source/app/src/main/res -name strings.xml -type f \
+            -exec sed -i 's/>Termux</>Lift Terminal</g' {} +
+
+      - name: Build APK
+        working-directory: source
+        env:
+          TERMUX_PACKAGE_VARIANT: apt-android-7
+          TERMUX_APK_VERSION_TAG: lift-terminal-debug
+          TERMUX_APP_VERSION_NAME: 0.118.3
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lift-Terminal-APK
+          path: source/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
